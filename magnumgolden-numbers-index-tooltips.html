@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>Golden Numbers — Magnum 4D</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111827;background:#f5f6f8}
+*{box-sizing:border-box} body{margin:0}.wrap{max-width:900px;margin:auto;padding:28px 18px 50px}
+h1{margin:0;font-size:clamp(30px,6vw,48px)} .sub{color:#667085;margin:6px 0 24px}
+.card{background:white;border:1px solid #e5e7eb;border-radius:20px;padding:20px;margin:14px 0;box-shadow:0 6px 24px rgba(0,0,0,.04)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+label{display:block;font-weight:700;margin-bottom:7px} select,input[type=month]{width:100%;padding:12px;border:1px solid #d0d5dd;border-radius:12px;font-size:16px;background:white}
+input[type=range]{width:100%}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button{border:0;border-radius:12px;padding:12px 18px;font-size:16px;font-weight:800;cursor:pointer;background:#111827;color:white}
+button.secondary{background:#eef0f3;color:#111827}.status{margin-top:12px;color:#475467}.error{color:#b42318}
+.numbers{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px;margin-top:16px}
+.ball{font-variant-numeric:tabular-nums;text-align:center;padding:14px 8px;border-radius:16px;background:#111827;color:white;font-size:26px;font-weight:900;letter-spacing:2px}
+small{color:#667085}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:600px}th,td{padding:9px;text-align:center;border-bottom:1px solid #eaecf0}th:first-child,td:first-child{text-align:left}
+.badge{display:inline-block;background:#f2f4f7;border-radius:999px;padding:5px 9px;font-size:13px}
+.hidden{display:none}
+.divider{height:1px;background:#eaecf0;margin:30px 0}
+.analysis-search{display:flex;gap:10px;flex-wrap:wrap}
+.analysis-search input{flex:1;min-width:180px;padding:12px;border:1px solid #d0d5dd;border-radius:12px;font-size:20px;letter-spacing:3px;font-weight:800}
+.metricgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-top:18px}
+.metric{background:#f8fafc;border:1px solid #eaecf0;border-radius:14px;padding:14px}.metric .label{font-size:12px;color:#667085;font-weight:700;text-transform:uppercase}.metric .value{font-size:22px;font-weight:900;margin-top:5px;word-break:break-word}
+.big4d{font-size:42px;font-weight:900;letter-spacing:7px;margin:4px 0 12px}.classification{padding:12px 14px;border-radius:12px;background:#f2f4f7;margin-top:10px}.poisson-details{margin-top:16px;padding-top:14px;border-top:1px solid #eaecf0}.note{font-size:13px;color:#667085;line-height:1.5}
+.tip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:5px;border:1px solid #98a2b3;border-radius:50%;font-size:12px;font-weight:800;color:#667085;cursor:help;vertical-align:middle;text-transform:none}
+.tiptext{visibility:hidden;opacity:0;position:absolute;z-index:20;left:50%;bottom:135%;transform:translateX(-50%);width:270px;padding:10px 12px;border-radius:10px;background:#111827;color:white;font-size:13px;font-weight:500;line-height:1.4;text-align:left;letter-spacing:0;text-transform:none;box-shadow:0 8px 24px rgba(0,0,0,.18);transition:opacity .15s}
+.tip:hover .tiptext,.tip:focus .tiptext,.tip.open .tiptext{visibility:visible;opacity:1}
+.tiptext:after{content:"";position:absolute;top:100%;left:50%;margin-left:-6px;border-width:6px;border-style:solid;border-color:#111827 transparent transparent transparent}
+details.help{margin-top:18px;border-top:1px solid #eaecf0;padding-top:14px}
+details.help summary{cursor:pointer;font-weight:800}
+details.help p{color:#667085;line-height:1.55}
+@media(max-width:600px){.tiptext{width:230px}.tip.edge .tiptext{left:auto;right:-10px;transform:none}.tip.edge .tiptext:after{left:auto;right:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Golden Numbers</h1>
+  <p class="sub">Magnum 4D · Historical-frequency weighted number generator</p>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label for="month">Generation month</label>
+        <input id="month" type="month">
+        <small id="historyLabel"></small>
+      </div>
+      <div>
+        <label for="strength">Historical weighting: <span id="strengthValue">100%</span></label>
+        <input id="strength" type="range" min="0" max="100" value="100">
+        <small>0% = uniform; 100% = historical positional frequency.</small>
+      </div>
+      <div>
+        <label for="count">Numbers to generate</label>
+        <select id="count">
+          <option>1</option><option selected>5</option><option>10</option><option>20</option><option>50</option>
+        </select>
+      </div>
+    </div>
+    <div class="row" style="margin-top:18px">
+      <button id="load">Load historical data</button>
+      <button id="generate" class="secondary" disabled>Generate numbers</button>
+    </div>
+    <div id="status" class="status">Choose a month, then load historical data.</div>
+  </div>
+
+  <div id="resultCard" class="card hidden">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">Generated numbers</h2>
+      <span id="sampleInfo" class="badge"></span>
+    </div>
+    <div id="numbers" class="numbers"></div>
+  </div>
+
+  <div id="analysisCard" class="card hidden">
+    <h2>Positional digit analysis</h2>
+    <p><small>Each column uses the digit frequency in that exact position across every historical winning number loaded.</small></p>
+    <div class="tablewrap"><table id="freqTable"></table></div>
+  </div>
+
+  <div id="sourceCard" class="card hidden">
+    <h2>Source data</h2>
+    <div id="sourceSummary"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="card">
+    <h2 style="margin-top:0">4D Historical Analysis</h2>
+    <p><small>Check any 4D number against all historical results currently collected in the database.</small></p>
+    <div class="analysis-search"><input id="numberSearch" type="text" inputmode="numeric" maxlength="4" placeholder="e.g. 4720"><button id="analyseNumberBtn">Analyse number</button></div>
+    <div id="numberStatus" class="status">Enter exactly four digits from 0000 to 9999.</div>
+  </div>
+  <div id="numberAnalysisCard" class="card hidden">
+    <div class="row" style="justify-content:space-between"><div><small>4D NUMBER</small><div id="analysedNumber" class="big4d"></div></div><span id="analysisDraws" class="badge" title="Number of Singapore Pools 4D draws currently stored in the historical database."></span></div>
+    <div class="metricgrid">
+      <div class="metric"><div class="label">Actual appearances <span class="tip" tabindex="0">i<span class="tiptext">How many times this exact 4D number has appeared in the historical results currently collected.</span></span></div><div id="actualOccurrences" class="value"></div></div>
+      <div class="metric"><div class="label">Expected λ <span class="tip" tabindex="0">i<span class="tiptext">The average number of appearances expected for any one 4D number if all 10,000 numbers have equal probability.</span></span></div><div id="expectedOccurrences" class="value"></div></div>
+      <div class="metric"><div class="label">Difference <span class="tip" tabindex="0">i<span class="tiptext">Actual appearances minus expected appearances. Positive means more appearances than expected; negative means fewer.</span></span></div><div id="differenceExpected" class="value"></div></div>
+      <div class="metric"><div class="label">Tail probability <span class="tip edge" tabindex="0">i<span class="tiptext">How unusual this number’s observed frequency is under the Poisson model when considered by itself. Smaller percentages indicate a more unusual historical result.</span></span></div><div id="tailProbability" class="value"></div></div>
+    </div>
+    <h3>Appearance history</h3>
+
+<div class="metricgrid">
+
+  <div class="metric">
+    <div class="label">
+      Last appeared
+      <span class="tip" tabindex="0">i
+        <span class="tiptext">
+          The most recent Magnum draw in which this exact 4D number appeared.
+        </span>
+      </span>
+    </div>
+    <div id="lastAppearance" class="value"></div>
+  </div>
+
+  <div class="metric">
+    <div class="label">
+      Draws since last seen
+      <span class="tip" tabindex="0">i
+        <span class="tiptext">
+          Number of Magnum draws since this number most recently appeared.
+        </span>
+      </span>
+    </div>
+    <div id="drawsSinceLastSeen" class="value"></div>
+  </div>
+
+  <div class="metric">
+    <div class="label">
+      Average interval
+      <span class="tip" tabindex="0">i
+        <span class="tiptext">
+          Average number of draws between historical appearances of this number.
+        </span>
+      </span>
+    </div>
+    <div id="averageGap" class="value"></div>
+  </div>
+<div class="metric">
+  <div class="label">
+    Interval progress
+    <span class="tip" tabindex="0">i
+      <span class="tiptext">
+        Draws since this number last appeared, expressed as a percentage of its historical average interval between appearances. This is descriptive only and does not indicate that a number is due to appear.
+      </span>
+    </span>
+  </div>
+  <div id="intervalProgress" class="value"></div>
+</div>
+  <div class="metric">
+    <div class="label">
+      Longest interval
+      <span class="tip edge" tabindex="0">i
+        <span class="tiptext">
+          Largest historical number of draws between two appearances of this number.
+        </span>
+      </span>
+    </div>
+    <div id="longestGap" class="value"></div>
+  </div>
+
+</div>
+    <h3>Historical rarity <span class="tip" tabindex="0">i<span class="tiptext">Rarity describes the historical occurrence pattern. It does not mean the number is more or less likely in the next independent draw.</span></span></h3>
+    <div class="classification"><b>Individual <span class="tip" tabindex="0">i<span class="tiptext">How unusual this number’s occurrence count is when this specific number is considered on its own.</span></span>:</b> <span id="individualClassification"></span></div>
+    <div class="classification"><b>Across all 10,000 numbers <span class="tip" tabindex="0">i<span class="tiptext">Checks whether the result remains unusual after accounting for examining all 10,000 possible 4D numbers.</span></span>:</b> <span id="wholeFieldClassification"></span></div>
+    <div class="poisson-details"><div class="metricgrid">
+      <div class="metric"><div class="label">Expected numbers this extreme <span class="tip" tabindex="0">i<span class="tiptext">Approximately how many of the 10,000 possible numbers we would expect to be at least this unusual purely by chance.</span></span></div><div id="expectedExtreme" class="value"></div></div>
+      <div class="metric"><div class="label">Chance ≥1 this extreme <span class="tip" tabindex="0">i<span class="tiptext">The probability that at least one of the 10,000 numbers would reach a result this extreme under the model.</span></span></div><div id="chanceExtreme" class="value"></div></div>
+      <div class="metric"><div class="label">Bonferroni adjusted <span class="tip" tabindex="0">i<span class="tiptext">A conservative adjustment for checking 10,000 numbers simultaneously. Smaller adjusted probabilities indicate stronger whole-field evidence of an unusual result.</span></span></div><div id="bonferroni" class="value"></div></div>
+      <div class="metric"><div class="label">Observations analysed <span class="tip edge" tabindex="0">i<span class="tiptext">Total winning 4D results currently included in the historical database: 23 prize numbers for each complete draw.</span></span></div><div id="analysisObservations" class="value"></div></div>
+    </div><p class="note" id="analysisNote"></p>
+<details class="help">
+  <summary>How to read this analysis</summary>
+  <p><b>Actual vs expected:</b> Actual appearances are counted from the collected historical results. Expected λ is the average count under an equal-probability model.</p>
+  <p><b>Individual rarity:</b> asks how unusual the observed count would be for this particular number considered on its own.</p>
+  <p><b>Whole-field rarity:</b> accounts for examining all 10,000 possible 4D numbers. With so many numbers, some individually unusual-looking results can occur naturally.</p>
+  <p><b>Important:</b> These measures describe historical frequency. They do not increase or decrease a number’s probability in a future independent draw.</p>
+</details></div>
+  </div>
+</div>
+
+<script>
+const WORKER_URL = "https://magnum-4d-history-builder.choonlong-teo2812.workers.dev";
+const HISTORY_WORKER_URL = "https://magnum-4d-history-builder.choonlong-teo2812.workers.dev";
+const monthEl=document.getElementById("month"), strengthEl=document.getElementById("strength"),
+strengthValue=document.getElementById("strengthValue"), countEl=document.getElementById("count"),
+statusEl=document.getElementById("status"), loadBtn=document.getElementById("load"),
+generateBtn=document.getElementById("generate"), numbersEl=document.getElementById("numbers"),
+historyLabel=document.getElementById("historyLabel");
+let counts=null,total=0,currentData=null;
+
+function defaultMonth(){
+ const d=new Date(), y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0");
+ monthEl.value=`${y}-${m}`; updateHistoryLabel();
+}
+function historicalMonth(){
+ const [y,m]=monthEl.value.split("-").map(Number); return {year:y-1,month:m};
+}
+function updateHistoryLabel(){
+ if(!monthEl.value)return;
+ const h=historicalMonth();
+ historyLabel.textContent=`Uses ${new Date(h.year,h.month-1,1).toLocaleString("en-SG",{month:"long",year:"numeric"})} results.`;
+}
+monthEl.addEventListener("change",()=>{updateHistoryLabel();generateBtn.disabled=true;counts=null;});
+strengthEl.addEventListener("input",()=>strengthValue.textContent=strengthEl.value+"%");
+
+function analyze(nums){
+ const c=Array.from({length:4},()=>Array(10).fill(0));
+ nums.forEach(v=>String(v).padStart(4,"0").slice(0,4).split("").forEach((d,p)=>c[p][+d]++));
+ return c;
+}
+function effectiveProb(c,p,d){
+ const a=Number(strengthEl.value)/100;
+ return (1-a)*0.1 + a*(c[p][d]/total);
+}
+function weightedDigit(p){
+ let weights=Array.from({length:10},(_,d)=>effectiveProb(counts,p,d));
+ let r=Math.random()*weights.reduce((a,b)=>a+b,0);
+ for(let d=0;d<10;d++){r-=weights[d];if(r<=0)return d}
+ return 9;
+}
+function generateOne(){return [0,1,2,3].map(weightedDigit).join("")}
+function renderTable(){
+ let s="<thead><tr><th>Digit</th><th>1st position</th><th>2nd position</th><th>3rd position</th><th>4th position</th></tr></thead><tbody>";
+ for(let d=0;d<10;d++){
+   s+=`<tr><td><b>${d}</b></td>`+[0,1,2,3].map(p=>`<td>${counts[p][d]} (${(counts[p][d]/total*100).toFixed(1)}%)</td>`).join("")+"</tr>";
+ }
+ document.getElementById("freqTable").innerHTML=s+"</tbody>";
+ document.getElementById("analysisCard").classList.remove("hidden");
+}
+function renderSource(data){
+ document.getElementById("sourceSummary").innerHTML=
+ `<p><b>${data.drawCount}</b> draws · <b>${data.resultCount}</b> winning numbers</p>`+
+ `<p>${data.draws.map(d=>`${d.date} — Draw ${d.drawNo}`).join("<br>")}</p>`;
+ document.getElementById("sourceCard").classList.remove("hidden");
+}
+loadBtn.onclick=async()=>{
+ if(!monthEl.value)return;
+ const h=historicalMonth();
+ statusEl.className="status"; statusEl.textContent="Loading official historical results…";
+ loadBtn.disabled=true;generateBtn.disabled=true;
+ try{
+   const r=await fetch(`${WORKER_URL}/api/month?year=${h.year}&month=${h.month}`);
+   const data=await r.json();
+   if(!r.ok||!Array.isArray(data.numbers))throw new Error(data.detail||data.error||"Could not load results.");
+   currentData=data; total=data.numbers.length; counts=analyze(data.numbers);
+   statusEl.textContent=`Loaded ${data.drawCount} draws and ${data.resultCount} results from ${new Date(h.year,h.month-1,1).toLocaleString("en-SG",{month:"long",year:"numeric"})}.`;
+   generateBtn.disabled=false; renderTable();renderSource(data);
+ }catch(e){statusEl.className="status error";statusEl.textContent="Error: "+e.message}
+ finally{loadBtn.disabled=false}
+};
+generateBtn.onclick=()=>{
+ if(!counts)return;
+ const n=Number(countEl.value), out=[];
+ for(let i=0;i<n;i++)out.push(generateOne());
+ numbersEl.innerHTML=out.map(x=>`<div class="ball">${x}</div>`).join("");
+ document.getElementById("sampleInfo").textContent=`${strengthEl.value}% weighting`;
+ document.getElementById("resultCard").classList.remove("hidden");
+};
+
+const numberSearch=document.getElementById("numberSearch"), analyseNumberBtn=document.getElementById("analyseNumberBtn"), numberStatus=document.getElementById("numberStatus");
+function pct(v){if(v==null||!Number.isFinite(Number(v)))return "—";const n=Number(v);if(n===0)return "0%";if(n<.000001)return "<0.0001%";if(n<.01)return (n*100).toFixed(4)+"%";return (n*100).toFixed(2)+"%"}
+function signed(v){const n=Number(v);return(n>0?"+":"")+n.toFixed(3)}
+async function analyse4D(){
+ const value=numberSearch.value.trim();
+ if(!/^\d{4}$/.test(value)){numberStatus.className="status error";numberStatus.textContent="Please enter exactly four digits, including leading zeros.";return}
+ analyseNumberBtn.disabled=true;numberStatus.className="status";numberStatus.textContent="Analysing historical frequency…";
+ try{
+  const r=await fetch(`${HISTORY_WORKER_URL}/number?value=${encodeURIComponent(value)}`),data=await r.json();
+  if(!r.ok)throw new Error(data.error||"Could not analyse this number.");
+  document.getElementById("analysedNumber").textContent=data.number;
+  document.getElementById("analysisDraws").textContent=`${Number(data.drawCount).toLocaleString()} draws`;
+  document.getElementById("actualOccurrences").textContent=Number(data.actualOccurrences).toLocaleString();
+  document.getElementById("expectedOccurrences").textContent=Number(data.expectedOccurrences).toFixed(3);
+  document.getElementById("differenceExpected").textContent=signed(data.differenceFromExpected);
+  document.getElementById("tailProbability").textContent=pct(data.poisson?.relevantTailProbability);
+  const a = data.appearanceStats;
+
+if (a) {
+
+  document.getElementById("lastAppearance").textContent =
+    a.lastAppearance
+      ? `${a.lastAppearance.date} · Draw ${a.lastAppearance.drawId}`
+      : "Never appeared";
+
+  document.getElementById("drawsSinceLastSeen").textContent =
+    a.drawsSinceLastSeen == null
+      ? "—"
+      : Number(a.drawsSinceLastSeen).toLocaleString();
+
+  document.getElementById("averageGap").textContent =
+    a.averageGap == null
+      ? "—"
+      : Number(a.averageGap).toFixed(2) + " draws";
+      document.getElementById("intervalProgress").textContent =
+  a.drawsSinceLastSeen == null ||
+  a.averageGap == null ||
+  Number(a.averageGap) === 0
+    ? "—"
+    : (
+        Number(a.drawsSinceLastSeen) /
+        Number(a.averageGap) *
+        100
+      ).toFixed(1) + "% of average";
+
+  document.getElementById("longestGap").textContent =
+    a.longestGap == null
+      ? "—"
+      : Number(a.longestGap).toLocaleString() + " draws";
+}
+  document.getElementById("individualClassification").textContent=data.individualClassification||data.classification||"—";
+  document.getElementById("wholeFieldClassification").textContent=data.wholeFieldClassification||"—";
+  const m=data.multipleComparison;
+  document.getElementById("expectedExtreme").textContent=m?Number(m.expectedNumbersThisExtreme).toFixed(3):"—";
+  document.getElementById("chanceExtreme").textContent=m?pct(m.probabilityAtLeastOneThisExtreme):"—";
+  document.getElementById("bonferroni").textContent=m?pct(m.bonferroniAdjustedProbability):"—";
+  document.getElementById("analysisObservations").textContent=Number(data.observations).toLocaleString();
+  document.getElementById("analysisNote").textContent=data.note||"Historical frequency does not change the probability of a number in a future independent draw.";
+  document.getElementById("numberAnalysisCard").classList.remove("hidden");
+  numberStatus.textContent=`Analysis updated using ${Number(data.drawCount).toLocaleString()} stored draws.`;
+ }catch(e){numberStatus.className="status error";numberStatus.textContent="Error: "+e.message}
+ finally{analyseNumberBtn.disabled=false}
+}
+analyseNumberBtn.onclick=analyse4D;
+numberSearch.addEventListener("input",()=>numberSearch.value=numberSearch.value.replace(/\D/g,"").slice(0,4));
+numberSearch.addEventListener("keydown",e=>{if(e.key==="Enter")analyse4D()});
+document.addEventListener("click",e=>{
+  const tip=e.target.closest(".tip");
+  document.querySelectorAll(".tip.open").forEach(x=>{if(x!==tip)x.classList.remove("open")});
+  if(tip){e.preventDefault();tip.classList.toggle("open")}
+});
+document.querySelectorAll(".tip").forEach(t=>t.addEventListener("keydown",e=>{
+  if(e.key==="Enter"||e.key===" "){e.preventDefault();t.classList.toggle("open")}
+  if(e.key==="Escape")t.classList.remove("open");
+}));
+
+defaultMonth();
+</script>
+</body>
+</html>
